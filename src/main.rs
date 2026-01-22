@@ -316,7 +316,8 @@ async fn main() {
     // Explicitly request voice state updates so the bot can follow the user into VC.
     let intents = gateway::GatewayIntents::GUILDS | gateway::GatewayIntents::GUILD_VOICE_STATES;
 
-    let songbird_config = SongbirdConfig::default().crypto_mode(songbird::driver::CryptoMode::Suffix);
+    let songbird_config =
+        SongbirdConfig::default().crypto_mode(songbird::driver::CryptoMode::Suffix);
 
     let mut client = Client::builder(&config.discord_token, intents)
         .event_handler(Handler)
