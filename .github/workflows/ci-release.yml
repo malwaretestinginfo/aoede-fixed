@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   lint:
+    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +30,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: lint
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore(release):')
     outputs:
       tag: ${{ steps.changelog.outputs.tag }}
       skipped: ${{ steps.changelog.outputs.skipped }}
@@ -44,7 +45,7 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v3
         with:
           output-file: "false"
-          skip-ci: "false"
+          skip-ci: "true"
           skip-on-empty: "false"
           skip-tag: "true"
           github-token: ${{ secrets.GITHUB_TOKEN }}
