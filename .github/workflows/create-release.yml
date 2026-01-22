@@ -23,13 +23,13 @@ jobs:
         with:
           output-file: "false"
           skip-ci: "false"
+          skip-on-empty: "false"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version-file: "Cargo.toml"
           version-path: "package.version"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
-        if: ${{ steps.changelog.outputs.skipped == 'false' }}
         with:
           tag_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}

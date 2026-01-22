@@ -313,10 +313,10 @@ async fn main() {
         .await,
     ));
 
-    let mut client = Client::builder(
-        &config.discord_token,
-        gateway::GatewayIntents::non_privileged(),
-    )
+    // Explicitly request voice state updates so the bot can follow the user into VC.
+    let intents = gateway::GatewayIntents::GUILDS | gateway::GatewayIntents::GUILD_VOICE_STATES;
+
+    let mut client = Client::builder(&config.discord_token, intents)
     .event_handler(Handler)
     .framework(framework)
     .type_map_insert::<SpotifyPlayerKey>(player)
@@ -330,3 +330,4 @@ async fn main() {
         .await
         .map_err(|why| println!("Client ended: {why:?}"));
 }
+
