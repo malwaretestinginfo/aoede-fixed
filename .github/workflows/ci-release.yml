@@ -42,6 +42,7 @@ jobs:
           output-file: "false"
           skip-ci: "false"
           skip-on-empty: "false"
+          skip-tag: "true"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version-file: "Cargo.toml"
           version-path: "package.version"
@@ -88,5 +89,3 @@ jobs:
             target/release/*-aoede
             target/release/*-aoede.exe
           fail_on_unmatched_files: true
-
-
