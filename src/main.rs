@@ -2,7 +2,7 @@ use std::env;
 use std::process::exit;
 
 use lib::config::Config;
-use songbird::{input, SerenityInit, Config};
+use songbird::{input, Config, SerenityInit};
 
 mod lib {
     pub mod config;
@@ -332,5 +332,3 @@ async fn main() {
         .await
         .map_err(|why| println!("Client ended: {why:?}"));
 }
-
-
