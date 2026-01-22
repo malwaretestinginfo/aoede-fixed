@@ -330,5 +330,3 @@ async fn main() {
         .await
         .map_err(|why| println!("Client ended: {why:?}"));
 }
-
-
