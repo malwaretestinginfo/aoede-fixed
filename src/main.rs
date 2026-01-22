@@ -2,7 +2,7 @@ use std::env;
 use std::process::exit;
 
 use lib::config::Config;
-use songbird::{input, SerenityInit};
+use songbird::{input, SerenityInit, Config};
 
 mod lib {
     pub mod config;
@@ -316,12 +316,14 @@ async fn main() {
     // Explicitly request voice state updates so the bot can follow the user into VC.
     let intents = gateway::GatewayIntents::GUILDS | gateway::GatewayIntents::GUILD_VOICE_STATES;
 
+    let songbird_config = Config::default().crypto_mode(songbird::driver::CryptoMode::Lite);
+
     let mut client = Client::builder(&config.discord_token, intents)
         .event_handler(Handler)
         .framework(framework)
         .type_map_insert::<SpotifyPlayerKey>(player)
         .type_map_insert::<ConfigKey>(config)
-        .register_songbird()
+        .register_songbird_from_config(songbird_config)
         .await
         .expect("Err creating client");
 
@@ -330,3 +332,5 @@ async fn main() {
         .await
         .map_err(|why| println!("Client ended: {why:?}"));
 }
+
+
