@@ -2,7 +2,7 @@ use std::env;
 use std::process::exit;
 
 use lib::config::Config;
-use songbird::{input, SerenityInit, Config as SongbirdConfig};
+use songbird::{input, Config as SongbirdConfig, SerenityInit};
 
 mod lib {
     pub mod config;
