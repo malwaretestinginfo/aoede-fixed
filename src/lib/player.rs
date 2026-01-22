@@ -28,7 +28,7 @@ use std::{io, mem};
 
 use byteorder::{ByteOrder, LittleEndian};
 use rubato::{FftFixedInOut, Resampler};
-use songbird::input::reader::MediaSource;
+use symphonia_core::io::MediaSource;
 
 pub struct SpotifyPlayer {
     player_config: PlayerConfig,

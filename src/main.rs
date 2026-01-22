@@ -125,17 +125,12 @@ impl EventHandler for Handler {
                         if let Some(handler_lock) = manager.get(guild_id) {
                             let mut handler = handler_lock.lock().await;
 
-                            let mut decoder = input::codec::OpusDecoderState::new().unwrap();
-                            decoder.allow_passthrough = false;
-
-                            let source = input::Input::new(
-                                true,
-                                input::reader::Reader::Extension(Box::new(
+                            let source = input::Input::from(
+                                input::RawAdapter::new(
                                     player.lock().await.emitted_sink.clone(),
-                                )),
-                                input::codec::Codec::FloatPcm,
-                                input::Container::Raw,
-                                None,
+                                    songbird::constants::SAMPLE_RATE_RAW,
+                                    2,
+                                ),
                             );
 
                             handler.set_bitrate(songbird::driver::Bitrate::Auto);
@@ -316,8 +311,7 @@ async fn main() {
     // Explicitly request voice state updates so the bot can follow the user into VC.
     let intents = gateway::GatewayIntents::GUILDS | gateway::GatewayIntents::GUILD_VOICE_STATES;
 
-    let songbird_config =
-        SongbirdConfig::default().crypto_mode(songbird::driver::CryptoMode::Suffix);
+    let songbird_config = SongbirdConfig::default();
 
     let mut client = Client::builder(&config.discord_token, intents)
         .event_handler(Handler)
