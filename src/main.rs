@@ -17,6 +17,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
+use serenity::all::ActivityData;
 use serenity::Client;
 
 use serenity::prelude::TypeMapKey;
@@ -24,7 +25,6 @@ use serenity::prelude::TypeMapKey;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
-    framework::StandardFramework,
     model::{gateway, gateway::Ready, id, user, voice::VoiceState},
 };
 
@@ -50,16 +50,17 @@ impl EventHandler for Handler {
 
         // Handle case when user is in VC when bot starts
         for guild_id in guilds {
-            let guild = ctx
-                .cache
-                .guild(guild_id)
-                .expect("Could not find guild in cache.");
+            let channel_id = {
+                let guild = ctx
+                    .cache
+                    .guild(guild_id)
+                    .expect("Could not find guild in cache.");
 
-            let channel_id = guild
-                .voice_states
-                .get(&config.discord_user_id.into())
-                .and_then(|voice_state| voice_state.channel_id);
-            drop(guild);
+                guild
+                    .voice_states
+                    .get(&config.discord_user_id.into())
+                    .and_then(|voice_state| voice_state.channel_id)
+            };
 
             if channel_id.is_some() {
                 // Enable casting
@@ -87,7 +88,7 @@ impl EventHandler for Handler {
 
                 match event {
                     PlayerEvent::Stopped { .. } => {
-                        c.set_presence(None, user::OnlineStatus::Online).await;
+                        c.set_presence(None, user::OnlineStatus::Online);
 
                         let manager = songbird::get(&c)
                             .await
@@ -127,20 +128,20 @@ impl EventHandler for Handler {
 
                             let source = input::Input::from(input::RawAdapter::new(
                                 player.lock().await.emitted_sink.clone(),
-                                songbird::constants::SAMPLE_RATE_RAW,
+                                songbird::constants::SAMPLE_RATE_RAW as u32,
                                 2,
                             ));
 
                             handler.set_bitrate(songbird::driver::Bitrate::Auto);
 
-                            handler.play_only_source(source);
+                            handler.play_only(source.into());
                         } else {
                             println!("Could not fetch guild by ID.");
                         }
                     }
 
                     PlayerEvent::Paused { .. } => {
-                        c.set_presence(None, user::OnlineStatus::Online).await;
+                        c.set_presence(None, user::OnlineStatus::Online);
                     }
 
                     PlayerEvent::Playing { track_id, .. } => {
@@ -163,10 +164,9 @@ impl EventHandler for Handler {
                                 let listening_to = format!("{}: {}", artist.name, track.name);
 
                                 c.set_presence(
-                                    Some(gateway::Activity::listening(listening_to)),
+                                    Some(ActivityData::listening(listening_to)),
                                     user::OnlineStatus::Online,
-                                )
-                                .await;
+                                );
                             }
                         }
                     }
@@ -198,7 +198,7 @@ impl EventHandler for Handler {
         // If user disconnected
         if old.clone().unwrap().channel_id.is_some() && new.channel_id.is_none() {
             // Disable casting
-            ctx.invisible().await;
+            ctx.invisible();
             player.lock().await.disable_connect().await;
 
             // Disconnect
@@ -214,7 +214,7 @@ impl EventHandler for Handler {
 
         // If user moved channels
         if old.clone().unwrap().channel_id.unwrap() != new.channel_id.unwrap() {
-            let bot_id = ctx.cache.current_user_id();
+            let bot_id = ctx.cache.current_user().id;
 
             // A bit hacky way to get old guild id because
             // its not present when switching voice channels
@@ -231,7 +231,7 @@ impl EventHandler for Handler {
                             .unwrap()
                             .channels
                             .iter()
-                            .any(|ch| ch.1.id() == new.channel_id.unwrap())
+                            .any(|ch| ch.1.id == new.channel_id.unwrap())
                     })
                     .unwrap()
                     .to_owned(),
@@ -268,8 +268,6 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-
-    let framework = StandardFramework::new();
 
     let config = match Config::new() {
         Ok(config) => config,
@@ -313,7 +311,6 @@ async fn main() {
 
     let mut client = Client::builder(&config.discord_token, intents)
         .event_handler(Handler)
-        .framework(framework)
         .type_map_insert::<SpotifyPlayerKey>(player)
         .type_map_insert::<ConfigKey>(config)
         .register_songbird_from_config(songbird_config)
