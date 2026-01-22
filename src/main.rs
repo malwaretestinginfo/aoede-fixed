@@ -125,13 +125,11 @@ impl EventHandler for Handler {
                         if let Some(handler_lock) = manager.get(guild_id) {
                             let mut handler = handler_lock.lock().await;
 
-                            let source = input::Input::from(
-                                input::RawAdapter::new(
-                                    player.lock().await.emitted_sink.clone(),
-                                    songbird::constants::SAMPLE_RATE_RAW,
-                                    2,
-                                ),
-                            );
+                            let source = input::Input::from(input::RawAdapter::new(
+                                player.lock().await.emitted_sink.clone(),
+                                songbird::constants::SAMPLE_RATE_RAW,
+                                2,
+                            ));
 
                             handler.set_bitrate(songbird::driver::Bitrate::Auto);
 
