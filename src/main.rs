@@ -317,17 +317,18 @@ async fn main() {
     let intents = gateway::GatewayIntents::GUILDS | gateway::GatewayIntents::GUILD_VOICE_STATES;
 
     let mut client = Client::builder(&config.discord_token, intents)
-    .event_handler(Handler)
-    .framework(framework)
-    .type_map_insert::<SpotifyPlayerKey>(player)
-    .type_map_insert::<ConfigKey>(config)
-    .register_songbird()
-    .await
-    .expect("Err creating client");
+        .event_handler(Handler)
+        .framework(framework)
+        .type_map_insert::<SpotifyPlayerKey>(player)
+        .type_map_insert::<ConfigKey>(config)
+        .register_songbird()
+        .await
+        .expect("Err creating client");
 
     let _ = client
         .start()
         .await
         .map_err(|why| println!("Client ended: {why:?}"));
 }
+
 
