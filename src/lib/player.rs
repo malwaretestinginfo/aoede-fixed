@@ -47,6 +47,7 @@ pub struct EmittedSink {
     input_buffer: Arc<Mutex<(Vec<f32>, Vec<f32>)>>,
     resampler: Arc<Mutex<FftFixedInOut<f32>>>,
     resampler_input_frames_needed: usize,
+    pending: Arc<Mutex<Vec<u8>>>,
 }
 
 impl EmittedSink {
@@ -75,6 +76,7 @@ impl EmittedSink {
             ))),
             resampler: Arc::new(Mutex::new(resampler)),
             resampler_input_frames_needed,
+            pending: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -132,39 +134,35 @@ impl io::Read for EmittedSink {
     fn read(&mut self, buff: &mut [u8]) -> io::Result<usize> {
         let sample_size = mem::size_of::<f32>() * 2;
 
-        if buff.len() < sample_size {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "EmittedSink does not support read buffer too small to guarantee \
-                holding one audio sample (8 bytes)",
-            ));
-        }
+        let mut pending = self.pending.lock().unwrap();
 
-        let receiver = self.receiver.lock().unwrap();
-
-        let mut bytes_written = 0;
-        while bytes_written + (sample_size - 1) < buff.len() {
-            if bytes_written == 0 {
-                // We can not return 0 bytes because songbird then thinks that the track has ended,
-                // therefore block until at least one stereo data set can be returned.
-
-                let sample = receiver.recv().unwrap();
-                LittleEndian::write_f32_into(
-                    &sample,
-                    &mut buff[bytes_written..(bytes_written + sample_size)],
-                );
-            } else if let Ok(data) = receiver.try_recv() {
-                LittleEndian::write_f32_into(
-                    &data,
-                    &mut buff[bytes_written..(bytes_written + sample_size)],
-                );
+        // Fill pending bytes until we have enough to satisfy the read, or until no more samples.
+        while pending.len() < buff.len() {
+            let sample = if pending.is_empty() {
+                // Block until we have at least one sample.
+                self.receiver.lock().unwrap().recv().unwrap()
             } else {
+                match self.receiver.lock().unwrap().try_recv() {
+                    Ok(s) => s,
+                    Err(_) => break,
+                }
+            };
+
+            let mut bytes = [0u8; 8];
+            LittleEndian::write_f32_into(&sample, &mut bytes);
+            pending.extend_from_slice(&bytes);
+
+            // Avoid unbounded growth if caller requests tiny buffers.
+            if pending.len() >= buff.len().max(sample_size) {
                 break;
             }
-            bytes_written += sample_size;
         }
 
-        Ok(bytes_written)
+        let to_copy = pending.len().min(buff.len());
+        buff[..to_copy].copy_from_slice(&pending[..to_copy]);
+        pending.drain(..to_copy);
+
+        Ok(to_copy)
     }
 }
 
@@ -192,6 +190,7 @@ impl Clone for EmittedSink {
             input_buffer: self.input_buffer.clone(),
             resampler: self.resampler.clone(),
             resampler_input_frames_needed: self.resampler_input_frames_needed,
+            pending: self.pending.clone(),
         }
     }
 }
